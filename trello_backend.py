@@ -12,16 +12,22 @@ BASE_TRELLO_URL = "https://api.trello.com/1"
 
 # Универсальная функция для получения ID объекта (доски или списка)
 def get_trello_id(url, name, params):
-    response = requests.get(url, params=params).json()
-    return next((item['id'] for item in response if item['name'] == name), None)
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        name_lower = name.lower()
+        return next((item['id'] for item in data if item['name'].lower() == name_lower), None)
+    except requests.exceptions.RequestException as e:
+        return None
 
 # Обработка действий Trello
 def handle_trello_action(action_data):
-    action = action_data.get("action")
+    action = action_data.get("action", "").lower()
 
     if action == "create_card":
-        board_name = action_data.get("board_name")
-        list_name = action_data.get("list_name")
+        board_name = action_data.get("board_name", "").lower()
+        list_name = action_data.get("list_name", "").lower()
         card_name = action_data.get("card_name")
         card_desc = action_data.get("card_desc", "")
 
@@ -43,18 +49,18 @@ def handle_trello_action(action_data):
             return {"error": "Список не найден"}
 
         # Создание карточки
-        response = requests.post(f"{BASE_TRELLO_URL}/cards", params={
-            'key': TRELLO_API_KEY,
-            'token': TRELLO_TOKEN,
-            'idList': list_id,
-            'name': card_name,
-            'desc': card_desc
-        })
-
-        if response.status_code == 200:
+        try:
+            response = requests.post(f"{BASE_TRELLO_URL}/cards", params={
+                'key': TRELLO_API_KEY,
+                'token': TRELLO_TOKEN,
+                'idList': list_id,
+                'name': card_name,
+                'desc': card_desc
+            })
+            response.raise_for_status()
             return {"status": "success", "message": "Карточка создана!"}
-        else:
-            return {"error": "Не удалось создать карточку", "details": response.text}
+        except requests.exceptions.RequestException as e:
+            return {"error": "Не удалось создать карточку", "details": str(e)}
 
     elif action == "move_card":
         return {"status": "move_card action not implemented"}
