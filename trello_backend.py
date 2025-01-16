@@ -6,8 +6,8 @@ app = Flask(__name__)
 app.config["DEBUG"] = True
 
 # Константы для Trello API
-TRELLO_API_KEY = "твой_trello_api_key"
-TRELLO_TOKEN = "твой_trello_token"
+TRELLO_API_KEY = "a735e40d5c7e8287555a60ac3bf51493"
+TRELLO_TOKEN = "ATTAe14936be75ded476e373e3a51e85225e60bd53cccb67c877f805663489c927c542DA8AAD"
 BASE_TRELLO_URL = "https://api.trello.com/1"
 
 # Универсальная функция для получения ID объекта (доски или списка)
