@@ -3,6 +3,8 @@ import requests
 
 app = Flask(__name__)
 
+app.config["DEBUG"] = True
+
 # Константы для Trello API
 TRELLO_API_KEY = "твой_trello_api_key"
 TRELLO_TOKEN = "твой_trello_token"
