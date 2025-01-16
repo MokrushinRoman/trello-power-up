@@ -17,8 +17,15 @@ def get_trello_id(url, name, params):
         response.raise_for_status()
         data = response.json()
         name_lower = name.lower()
+        
+        # Логируем список объектов (для отладки)
+        print(f"Список объектов с {url}:")
+        for item in data:
+            print(f"- {item['name']} (ID: {item['id']})")
+        
         return next((item['id'] for item in data if item['name'].lower() == name_lower), None)
     except requests.exceptions.RequestException as e:
+        print(f"Ошибка при запросе к Trello API: {str(e)}")
         return None
 
 # Обработка действий Trello
@@ -39,14 +46,14 @@ def handle_trello_action(action_data):
             'key': TRELLO_API_KEY, 'token': TRELLO_TOKEN
         })
         if not board_id:
-            return {"error": "Доска не найдена"}
+            return {"error": f"Доска '{board_name}' не найдена"}
 
         # Получение ID списка
         list_id = get_trello_id(f"{BASE_TRELLO_URL}/boards/{board_id}/lists", list_name, {
             'key': TRELLO_API_KEY, 'token': TRELLO_TOKEN
         })
         if not list_id:
-            return {"error": "Список не найден"}
+            return {"error": f"Список '{list_name}' не найден на доске '{board_name}'"}
 
         # Создание карточки
         try:
@@ -58,8 +65,9 @@ def handle_trello_action(action_data):
                 'desc': card_desc
             })
             response.raise_for_status()
-            return {"status": "success", "message": "Карточка создана!"}
+            return {"status": "success", "message": f"Карточка '{card_name}' создана в списке '{list_name}'!"}
         except requests.exceptions.RequestException as e:
+            print(f"Ошибка при создании карточки: {str(e)}")
             return {"error": "Не удалось создать карточку", "details": str(e)}
 
     elif action == "move_card":
