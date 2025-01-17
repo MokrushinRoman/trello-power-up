@@ -1,35 +1,43 @@
+import os
 from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-app.config["DEBUG"] = True
-
-# Константы для Trello API
-TRELLO_API_KEY = "a735e40d5c7e8287555a60ac3bf51493"
-TRELLO_TOKEN = "ATTAe14936be75ded476e373e3a51e85225e60bd53cccb67c877f805663489c927c542DA8AAD"
+# Константы для Trello API, читаем их из окружения
+TRELLO_API_KEY = os.getenv("TRELLO_API_KEY")
+TRELLO_TOKEN = os.getenv("TRELLO_TOKEN")
 BASE_TRELLO_URL = "https://api.trello.com/1"
 
-# Универсальная функция для получения ID объекта (доски или списка)
-def get_trello_id(url, name, params):
+if not TRELLO_API_KEY or not TRELLO_TOKEN:
+    raise ValueError("Необходимо задать переменные окружения TRELLO_API_KEY и TRELLO_TOKEN.")
+
+# Универсальная функция для работы с Trello API
+def trello_request(method, endpoint, params=None, data=None):
+    """Обобщенная функция для выполнения запросов к Trello API."""
+    url = f"{BASE_TRELLO_URL}/{endpoint}"
+    params = params or {}
+    params.update({'key': TRELLO_API_KEY, 'token': TRELLO_TOKEN})
     try:
-        response = requests.get(url, params=params)
+        response = requests.request(method, url, params=params, json=data)
         response.raise_for_status()
-        data = response.json()
-        name_lower = name.lower()
-        
-        # Логируем список объектов (для отладки)
-        print(f"Список объектов с {url}:")
-        for item in data:
-            print(f"- {item['name']} (ID: {item['id']})")
-        
-        return next((item['id'] for item in data if item['name'].lower() == name_lower), None)
+        return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Ошибка при запросе к Trello API: {str(e)}")
+        print(f"Ошибка Trello API: {e}")
         return None
 
-# Обработка действий Trello
+# Функция для получения ID объекта (доски или списка)
+def get_trello_id(endpoint, name):
+    """Ищет ID объекта по имени."""
+    items = trello_request("GET", endpoint)
+    if not items:
+        return None
+    name_lower = name.lower()
+    return next((item['id'] for item in items if item['name'].lower() == name_lower), None)
+
+# Функция обработки действий
 def handle_trello_action(action_data):
+    """Обрабатывает действия, переданные через вебхук."""
     action = action_data.get("action", "").lower()
 
     if action == "create_card":
@@ -41,34 +49,25 @@ def handle_trello_action(action_data):
         if not board_name or not list_name or not card_name:
             return {"error": "Отсутствуют обязательные параметры"}
 
-        # Получение ID доски
-        board_id = get_trello_id(f"{BASE_TRELLO_URL}/members/me/boards", board_name, {
-            'key': TRELLO_API_KEY, 'token': TRELLO_TOKEN
-        })
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
         if not board_id:
             return {"error": f"Доска '{board_name}' не найдена"}
 
-        # Получение ID списка
-        list_id = get_trello_id(f"{BASE_TRELLO_URL}/boards/{board_id}/lists", list_name, {
-            'key': TRELLO_API_KEY, 'token': TRELLO_TOKEN
-        })
+        # Получаем ID списка
+        list_id = get_trello_id(f"boards/{board_id}/lists", list_name)
         if not list_id:
             return {"error": f"Список '{list_name}' не найден на доске '{board_name}'"}
 
-        # Создание карточки
-        try:
-            response = requests.post(f"{BASE_TRELLO_URL}/cards", params={
-                'key': TRELLO_API_KEY,
-                'token': TRELLO_TOKEN,
-                'idList': list_id,
-                'name': card_name,
-                'desc': card_desc
-            })
-            response.raise_for_status()
+        # Создаем карточку
+        card = trello_request("POST", "cards", params={
+            'idList': list_id,
+            'name': card_name,
+            'desc': card_desc
+        })
+        if card:
             return {"status": "success", "message": f"Карточка '{card_name}' создана в списке '{list_name}'!"}
-        except requests.exceptions.RequestException as e:
-            print(f"Ошибка при создании карточки: {str(e)}")
-            return {"error": "Не удалось создать карточку", "details": str(e)}
+        return {"error": "Не удалось создать карточку"}
 
     elif action == "move_card":
         return {"status": "move_card action not implemented"}
@@ -85,7 +84,7 @@ def webhook():
     result = handle_trello_action(data)
     return jsonify(result)
 
-# Тестовый маршрут для проверки
+# Тестовый маршрут
 @app.route("/", methods=["GET"])
 def home():
     return "Flask сервер работает! 🚀", 200
