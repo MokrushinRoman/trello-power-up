@@ -16,15 +16,6 @@ BASE_TRELLO_URL = "https://api.trello.com/1"
 if not TRELLO_API_KEY or not TRELLO_TOKEN:
     raise ValueError("Необходимо задать переменные окружения TRELLO_API_KEY и TRELLO_TOKEN.")
 
-def validate_trello_keys():  
-    """Проверяет, работают ли ключи API и токен."""  
-    response = trello_request("GET", "members/me")  
-    if not response:  
-        raise ValueError("Ошибка проверки: Проверьте TRELLO_API_KEY и TRELLO_TOKEN.")  
-    print(f"Ключи валидны. Имя пользователя Trello: {response.get('fullName', 'Неизвестно')}")
-
-validate_trello_keys()
-
 # Универсальная функция для работы с Trello API
 def trello_request(method, endpoint, params=None, data=None):
     """Обобщенная функция для выполнения запросов к Trello API."""
@@ -38,6 +29,16 @@ def trello_request(method, endpoint, params=None, data=None):
     except requests.exceptions.RequestException as e:
         print(f"Ошибка Trello API: {e}")
         return None
+
+# Функция проверки ключей Trello
+def validate_trello_keys():  
+    """Проверяет, работают ли ключи API и токен."""  
+    response = trello_request("GET", "members/me")  
+    if not response:  
+        raise ValueError("Ошибка проверки: Проверьте TRELLO_API_KEY и TRELLO_TOKEN.")  
+    print(f"Ключи валидны. Имя пользователя Trello: {response.get('fullName', 'Неизвестно')}")
+
+validate_trello_keys()
 
 # Функция для получения ID объекта (доски или списка)
 def get_trello_id(endpoint, name):
