@@ -120,6 +120,30 @@ def handle_trello_action(action_data):
             return {"status": "success", "message": f"Карточка '{card_name}' перемещена в список '{target_list_name}'!"}
         return {"error": "Не удалось переместить карточку"}
 
+    elif action == "delete_card":
+        card_name = action_data.get("card_name")
+        board_name = action_data.get("board_name", "").lower()
+
+        if not card_name or not board_name:
+            return {"error": "Параметры 'card_name' и 'board_name' обязательны для действия 'delete_card'."}
+
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
+        if not board_id:
+            return {"error": f"Доска '{board_name}' не найдена"}
+
+        # Поиск карточки
+        cards = trello_request("GET", f"boards/{board_id}/cards")
+        card_id = next((c['id'] for c in cards if c['name'] == card_name), None)
+        if not card_id:
+            return {"error": f"Карточка '{card_name}' не найдена на доске '{board_name}'"}
+
+        # Удаляем карточку
+        response = trello_request("DELETE", f"cards/{card_id}")
+        if response is None:
+            return {"error": "Не удалось удалить карточку"}
+        return {"status": "success", "message": f"Карточка '{card_name}' успешно удалена"}
+
     return {"error": "Неизвестное действие"}
 
 # Маршрут для вебхуков
