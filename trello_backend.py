@@ -144,6 +144,31 @@ def handle_trello_action(action_data):
             return {"error": "Не удалось удалить карточку"}
         return {"status": "success", "message": f"Карточка '{card_name}' успешно удалена"}
 
+    elif action == "update_card_desc":
+        card_name = action_data.get("card_name")
+        board_name = action_data.get("board_name", "").lower()
+        new_desc = action_data.get("new_desc", "")
+
+        if not card_name or not board_name:
+            return {"error": "Параметры 'card_name' и 'board_name' обязательны для действия 'update_card_desc'."}
+
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
+        if not board_id:
+            return {"error": f"Доска '{board_name}' не найдена"}
+
+        # Поиск карточки
+        cards = trello_request("GET", f"boards/{board_id}/cards")
+        card_id = next((c['id'] for c in cards if c['name'] == card_name), None)
+        if not card_id:
+            return {"error": f"Карточка '{card_name}' не найдена на доске '{board_name}'"}
+
+        # Обновляем описание карточки
+        updated_card = trello_request("PUT", f"cards/{card_id}", params={"desc": new_desc})
+        if updated_card:
+            return {"status": "success", "message": f"Описание карточки '{card_name}' обновлено."}
+        return {"error": "Не удалось обновить описание карточки"}
+
     return {"error": "Неизвестное действие"}
 
 # Маршрут для вебхуков
