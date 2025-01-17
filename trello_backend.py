@@ -181,6 +181,24 @@ def handle_trello_action(action_data):
             return {"status": "success", "message": f"Доска '{board_name}' успешно создана!"}
         return {"error": "Не удалось создать доску"}
 
+    elif action == "create_list":
+        board_name = action_data.get("board_name", "").lower()
+        list_name = action_data.get("list_name")
+
+        if not board_name or not list_name:
+            return {"error": "Параметры 'board_name' и 'list_name' обязательны для действия 'create_list'."}
+
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
+        if not board_id:
+            return {"error": f"Доска '{board_name}' не найдена"}
+
+        # Создаём новый список
+        new_list = trello_request("POST", f"boards/{board_id}/lists", params={"name": list_name})
+        if new_list:
+            return {"status": "success", "message": f"Список '{list_name}' успешно создан на доске '{board_name}'!"}
+        return {"error": "Не удалось создать список"}
+
     return {"error": "Неизвестное действие"}
 
 # Маршрут для вебхуков
