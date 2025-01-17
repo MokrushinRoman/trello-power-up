@@ -51,7 +51,14 @@ def handle_trello_action(action_data):
         card_desc = action_data.get("card_desc", "")
 
         if not board_name or not list_name or not card_name:
-            return {"error": "Отсутствуют обязательные параметры"}
+            missing_params = []
+            if not board_name:
+                missing_params.append("'board_name'")
+            if not list_name:
+                missing_params.append("'list_name'")
+            if not card_name:
+                missing_params.append("'card_name'")
+            return {"error": f"Отсутствуют обязательные параметры: {', '.join(missing_params)}."}
 
         # Получаем ID доски
         board_id = get_trello_id("members/me/boards", board_name)
