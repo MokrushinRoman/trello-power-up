@@ -10,18 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Шаг 1: Проверка кода из репозитория
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Шаг 2: Настройка Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
+      # Шаг 3: Установка зависимостей
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
 
+      # Шаг 4: Отладка переменных окружения
+      - name: Debug environment
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+        run: |
+          echo "TRELLO_API_KEY=${{ secrets.TRELLO_API_KEY }}"
+          echo "TRELLO_TOKEN=${{ secrets.TRELLO_TOKEN }}"
+
+      # Шаг 5: Запуск приложения Flask
       - name: Run Flask application
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
