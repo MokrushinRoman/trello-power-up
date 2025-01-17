@@ -169,6 +169,18 @@ def handle_trello_action(action_data):
             return {"status": "success", "message": f"Описание карточки '{card_name}' обновлено."}
         return {"error": "Не удалось обновить описание карточки"}
 
+    elif action == "create_board":
+        board_name = action_data.get("board_name")
+
+        if not board_name:
+            return {"error": "Параметр 'board_name' обязателен для действия 'create_board'."}
+
+        # Создаём новую доску
+        board = trello_request("POST", "boards", params={"name": board_name})
+        if board:
+            return {"status": "success", "message": f"Доска '{board_name}' успешно создана!"}
+        return {"error": "Не удалось создать доску"}
+
     return {"error": "Неизвестное действие"}
 
 # Маршрут для вебхуков
