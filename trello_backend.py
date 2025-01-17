@@ -91,7 +91,34 @@ def handle_trello_action(action_data):
         return {"error": "Не удалось создать карточку"}
 
     elif action == "move_card":
-        return {"status": "move_card action not implemented"}
+        card_name = action_data.get("card_name")
+        target_list_name = action_data.get("target_list_name", "").lower()
+        board_name = action_data.get("board_name", "").lower()
+
+        if not card_name or not target_list_name or not board_name:
+            return {"error": "Параметры 'card_name', 'target_list_name' и 'board_name' обязательны для действия 'move_card'."}
+
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
+        if not board_id:
+            return {"error": f"Доска '{board_name}' не найдена"}
+
+        # Получаем ID целевого списка
+        target_list_id = get_trello_id(f"boards/{board_id}/lists", target_list_name)
+        if not target_list_id:
+            return {"error": f"Список '{target_list_name}' не найден на доске '{board_name}'"}
+
+        # Поиск карточки
+        cards = trello_request("GET", f"boards/{board_id}/cards")
+        card_id = next((c['id'] for c in cards if c['name'] == card_name), None)
+        if not card_id:
+            return {"error": f"Карточка '{card_name}' не найдена на доске '{board_name}'"}
+
+        # Перемещаем карточку
+        updated_card = trello_request("PUT", f"cards/{card_id}", params={"idList": target_list_id})
+        if updated_card:
+            return {"status": "success", "message": f"Карточка '{card_name}' перемещена в список '{target_list_name}'!"}
+        return {"error": "Не удалось переместить карточку"}
 
     return {"error": "Неизвестное действие"}
 
