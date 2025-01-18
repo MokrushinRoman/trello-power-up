@@ -193,3 +193,23 @@ def handle_trello_action(action_data):
         if updated_card:
             return {"status": "success", "message": f"Название карточки обновлено на '{new_name}'"}
         return {"error": "Не удалось обновить название карточки"}
+
+    return {"error": "Неизвестное действие"}
+
+# Маршрут для вебхуков
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.json
+    if not data:
+        return jsonify({"error": "Данные не переданы"}), 400
+
+    result = handle_trello_action(data)
+    return jsonify(result)
+
+# Тестовый маршрут
+@app.route("/", methods=["GET"])
+def home():
+    return "Flask сервер работает! 🚀", 200
+
+if __name__ == "__main__":
+    app.run(port=5000)
