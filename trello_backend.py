@@ -169,52 +169,27 @@ def handle_trello_action(action_data):
             return {"status": "success", "message": f"Описание карточки '{card_name}' обновлено."}
         return {"error": "Не удалось обновить описание карточки"}
 
-    elif action == "create_board":
-        board_name = action_data.get("board_name")
-
-        if not board_name:
-            return {"error": "Параметр 'board_name' обязателен для действия 'create_board'."}
-
-        # Создаём новую доску
-        board = trello_request("POST", "boards", params={"name": board_name})
-        if board:
-            return {"status": "success", "message": f"Доска '{board_name}' успешно создана!"}
-        return {"error": "Не удалось создать доску"}
-
-    elif action == "create_list":
+    elif action == "update_card_name":
+        card_name = action_data.get("card_name")
         board_name = action_data.get("board_name", "").lower()
-        list_name = action_data.get("list_name")
+        new_name = action_data.get("new_name")
 
-        if not board_name or not list_name:
-            return {"error": "Параметры 'board_name' и 'list_name' обязательны для действия 'create_list'."}
+        if not card_name or not board_name or not new_name:
+            return {"error": "Параметры 'card_name', 'board_name' и 'new_name' обязательны для действия 'update_card_name'."}
 
         # Получаем ID доски
         board_id = get_trello_id("members/me/boards", board_name)
         if not board_id:
             return {"error": f"Доска '{board_name}' не найдена"}
 
-        # Создаём новый список
-        new_list = trello_request("POST", f"boards/{board_id}/lists", params={"name": list_name})
-        if new_list:
-            return {"status": "success", "message": f"Список '{list_name}' успешно создан на доске '{board_name}'!"}
-        return {"error": "Не удалось создать список"}
+        # Поиск карточки
+        cards = trello_request("GET", f"boards/{board_id}/cards")
+        card_id = next((c['id'] for c in cards if c['name'] == card_name), None)
+        if not card_id:
+            return {"error": f"Карточка '{card_name}' не найдена на доске '{board_name}'"}
 
-    return {"error": "Неизвестное действие"}
-
-# Маршрут для вебхуков
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.json
-    if not data:
-        return jsonify({"error": "Данные не переданы"}), 400
-
-    result = handle_trello_action(data)
-    return jsonify(result)
-
-# Тестовый маршрут
-@app.route("/", methods=["GET"])
-def home():
-    return "Flask сервер работает! 🚀", 200
-
-if __name__ == "__main__":
-    app.run(port=5000)
+        # Обновляем название карточки
+        updated_card = trello_request("PUT", f"cards/{card_id}", params={"name": new_name})
+        if updated_card:
+            return {"status": "success", "message": f"Название карточки обновлено на '{new_name}'"}
+        return {"error": "Не удалось обновить название карточки"}
