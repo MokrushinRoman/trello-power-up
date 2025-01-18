@@ -180,6 +180,43 @@ def handle_trello_action(action_data):
             return {"status": "success", "message": f"Карточка '{card_name}' перемещена из списка '{current_list_name}' в '{new_list_name}'."}
         return {"error": "Не удалось переместить карточку."}
 
+    elif action == "get_board_info":
+        board_name = action_data.get("board_name", "").lower()
+
+        if not board_name:
+            return {"error": "Параметр 'board_name' обязателен для действия 'get_board_info'."}
+
+        # Получаем ID доски
+        board_id = get_trello_id("members/me/boards", board_name)
+        if not board_id:
+            return {"error": f"Доска '{board_name}' не найдена."}
+
+        # Получаем списки на доске
+        lists = trello_request("GET", f"boards/{board_id}/lists")
+        if not lists:
+            return {"error": "Не удалось получить списки на доске."}
+
+        # Формируем структуру доски
+        board_info = {
+            "name": board_name,
+            "lists": []
+        }
+
+        for lst in lists:
+            list_id = lst["id"]
+            list_name = lst["name"]
+
+            # Получаем карточки в списке
+            cards = trello_request("GET", f"lists/{list_id}/cards")
+            simplified_cards = [{"name": card["name"], "desc": card["desc"], "url": card["url"]} for card in cards]
+
+            board_info["lists"].append({
+                "name": list_name,
+                "cards": simplified_cards
+            })
+
+        return {"status": "success", "board": board_info}
+
     return {"error": "Неизвестное действие"}
 
 # Маршрут для вебхуков
